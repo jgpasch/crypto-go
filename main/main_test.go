@@ -16,20 +16,70 @@ var a main.App
 
 func TestMain(m *testing.M) {
 	a = main.App{}
-	a.Initialize("john", "new_sub_test_db")
+	a.Initialize("john", "new_sub_db")
 
 	ensureTableExists()
 
 	code := m.Run()
 
-	clearTable()
+	clearTable("both")
 
 	os.Exit(code)
 }
 
+// Test Create User
+func TestCreateUser(t *testing.T) {
+	clearTable("users")
+
+	payload := []byte(`{"email":"test@email.com","password":"mysecurepassword123"}`)
+
+	req, _ := http.NewRequest("POST", "/users/register", bytes.NewBuffer(payload))
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusCreated, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["email"] != "test@email.com" {
+		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
+	}
+	if m["password"] == nil {
+		t.Error("Expected the 'password' key of the response to have a value. Got nil")
+	}
+	if m["salt"] == nil {
+		t.Error("Expected the 'salt' key of the response to have a value. Got nil")
+	}
+}
+
+// Test get user by email
+func TestGetUserByEmail(t *testing.T) {
+	clearTable("users")
+	addUser()
+
+	payload := []byte(`{"email":"test@email.com"}`)
+
+	req, _ := http.NewRequest("POST", "/user", bytes.NewBuffer(payload))
+	response := executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["email"] != "test@email.com" {
+		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
+	}
+	if m["password"] != "mysecurepassword123" {
+		t.Errorf("Expected the 'password' key of the response to be set to 'mysecurepassword123'. Got '%v'", m["password"])
+	}
+	if m["salt"] != "randomsalt" {
+		t.Errorf("Expected the 'salt' key of the response to be set to 'randomsalt'. Got '%v'", m["salt"])
+	}
+}
+
 // Test Empty Table
 func TestEmptyTable(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 
 	req, _ := http.NewRequest("GET", "/subscriptions", nil)
 	response := executeRequest(req)
@@ -39,7 +89,7 @@ func TestEmptyTable(t *testing.T) {
 
 // Test non existing subscription
 func TestGetNonExistentSub(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 
 	req, _ := http.NewRequest("GET", "/subscriptions/11", nil)
 	response := executeRequest(req)
@@ -55,7 +105,7 @@ func TestGetNonExistentSub(t *testing.T) {
 
 // Test creating a subscription
 func TestCreateSub(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 
 	payload := []byte(`{"token":"ETH","percent":10,"minVal":220,"maxVal":400,"minMaxChange":10}`)
 
@@ -91,13 +141,21 @@ func TestCreateSub(t *testing.T) {
 
 // Test to get single sub
 func TestGetSub(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 	addProducts(1)
 
 	req, _ := http.NewRequest("GET", "/subscriptions/1", nil)
 	response := executeRequest(req)
 
 	checkResponseCode(t, http.StatusOK, response.Code)
+}
+
+func addUser() {
+	email := "test@email.com"
+	password := "mysecurepassword123"
+	salt := "randomsalt"
+
+	a.DB.Exec("INSERT INTO users(email, password, salt) VALUES($1, $2, $3)", email, password, salt)
 }
 
 func addProducts(count int) {
@@ -114,7 +172,7 @@ func addProducts(count int) {
 
 // Test to get a single sub by token name
 func TestGetSubByToken(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 	addProducts(5)
 
 	req, _ := http.NewRequest("GET", "/subscriptions/DGB", nil)
@@ -138,7 +196,7 @@ func executeRequest(req *http.Request) *httptest.ResponseRecorder {
 
 // Test to update a sub
 func TestUpdateSub(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 	addProducts(1)
 
 	req, _ := http.NewRequest("GET", "/subscriptions/1", nil)
@@ -184,7 +242,7 @@ func TestUpdateSub(t *testing.T) {
 
 // Test to delete a sub
 func TestDeleteSub(t *testing.T) {
-	clearTable()
+	clearTable("subs")
 	addProducts(1)
 
 	req, _ := http.NewRequest("GET", "/subscriptions/1", nil)
@@ -207,24 +265,46 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 	}
 }
 
-const tableCreationQuery = `CREATE TABLE IF NOT EXISTS subs
+const subscriptionTableCreationQuery = `CREATE TABLE IF NOT EXISTS subs
 (
-id SERIAL PRIMARY KEY,
-token VARCHAR(30) NOT NULL,
-percent NUMERIC(10,2) NOT NULL DEFAULT 0,
-minval NUMERIC(10,2) NOT NULL DEFAULT 0,
-maxval NUMERIC(10,2) NOT NULL DEFAULT 0,
-minmaxchange NUMERIC(10,2) NOT NULL DEFAULT 0,
-active BOOLEAN DEFAULT FALSE
+	id SERIAL PRIMARY KEY,
+	token VARCHAR(30) NOT NULL,
+	percent NUMERIC(10,2) NOT NULL DEFAULT 0,
+	minval NUMERIC(10,2) NOT NULL DEFAULT 0,
+	maxval NUMERIC(10,2) NOT NULL DEFAULT 0,
+	minmaxchange NUMERIC(10,2) NOT NULL DEFAULT 0,
+	active BOOLEAN DEFAULT FALSE
+)`
+
+const userTableCreationQuery = `CREATE TABLE IF NOT EXISTS users
+(
+	id SERIAL PRIMARY KEY,
+	email TEXT NOT NULL,
+	password TEXT NOT NULL,
+	salt TEXT NOT NULL
 )`
 
 func ensureTableExists() {
-	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+	if _, err := a.DB.Exec(subscriptionTableCreationQuery); err != nil {
+		log.Fatal(err)
+	}
+	if _, err := a.DB.Exec(userTableCreationQuery); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func clearTable() {
-	a.DB.Exec("DELETE from subs")
-	a.DB.Exec("ALTER SEQUENCE subs_id_seq RESTART WITH 1")
+func clearTable(table string) {
+	switch table {
+	case "users":
+		a.DB.Exec("DELETE from users")
+		a.DB.Exec("ALTER SEQUENCE users_id_seq RESTART WITH 1")
+	case "subs":
+		a.DB.Exec("DELETE from subs")
+		a.DB.Exec("ALTER SEQUENCE subs_id_seq RESTART WITH 1")
+	default:
+		a.DB.Exec("DELETE from subs")
+		a.DB.Exec("ALTER SEQUENCE subs_id_seq RESTART WITH 1")
+		a.DB.Exec("DELETE from users")
+		a.DB.Exec("ALTER SEQUENCE users_id_seq RESTART WITH 1")
+	}
 }

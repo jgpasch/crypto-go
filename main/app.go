@@ -46,12 +46,64 @@ func (a *App) Run(addr string) {
 }
 
 func (a *App) initializeRoutes() {
+	// user routes
+	a.Router.HandleFunc("/user", a.getUserByEmail).Methods("POST")
+	a.Router.HandleFunc("/users", a.getAllUsers).Methods("GET")
+	a.Router.HandleFunc("/users/register", a.createUser).Methods("POST")
+
+	// subscription routes
 	a.Router.HandleFunc("/subscriptions", a.getAllSubs).Methods("GET")
 	a.Router.HandleFunc("/subscriptions", a.createSub).Methods("POST")
 	a.Router.HandleFunc("/subscriptions/{token:[a-zA-Z]+}", a.getSubByToken).Methods("GET")
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.getSub).Methods("GET")
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.updateSub).Methods("PUT")
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.deleteSub).Methods("DELETE")
+}
+
+// GET all users
+func (a *App) getAllUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := getAllUsers(a.DB)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	respondWithJSON(w, http.StatusOK, users)
+}
+
+func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
+		return
+	}
+	defer r.Body.Close()
+
+	if err := u.createUser(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, u)
+}
+
+// GET user by email
+func (a *App) getUserByEmail(w http.ResponseWriter, r *http.Request) {
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	defer r.Body.Close()
+
+	if err := u.getUserByEmail(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, u)
 }
 
 // Gets a single subscription
