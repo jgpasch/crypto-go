@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strconv"
 	"testing"
 )
 
@@ -106,9 +105,35 @@ func addProducts(count int) {
 		count = 1
 	}
 
+	tokens := [5]string{"DGB", "SC", "ETH", "BTC", "ICN"}
+
 	for i := 0; i < count; i++ {
-		a.DB.Exec("INSERT INTO subs(token, percent, minval, maxval, minmaxchange) VALUES($1, $2, $3, $4, $5)", "Sub "+strconv.Itoa(i), 10, (i+1.0)*20, (i+1.0)*30, 10)
+		a.DB.Exec("INSERT INTO subs(token, percent, minval, maxval, minmaxchange) VALUES($1, $2, $3, $4, $5)", tokens[i%5], 10, (i+1.0)*20, (i+1.0)*30, 10)
 	}
+}
+
+// Test to get a single sub by token name
+func TestGetSubByToken(t *testing.T) {
+	clearTable()
+	addProducts(5)
+
+	req, _ := http.NewRequest("GET", "/subscriptions/DGB", nil)
+	response := httptest.NewRecorder()
+	a.Router.ServeHTTP(response, req)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["token"] != "DGB" {
+		t.Errorf("Expected the token to be 'DGB'. Got '%v'", m["token"])
+	}
+}
+
+func executeRequest(req *http.Request) *httptest.ResponseRecorder {
+	rr := httptest.NewRecorder()
+	a.Router.ServeHTTP(rr, req)
+
+	return rr
 }
 
 // Test to update a sub
@@ -174,13 +199,6 @@ func TestDeleteSub(t *testing.T) {
 	req, _ = http.NewRequest("GET", "/subscriptions/1", nil)
 	response = executeRequest(req)
 	checkResponseCode(t, http.StatusNotFound, response.Code)
-}
-
-func executeRequest(req *http.Request) *httptest.ResponseRecorder {
-	rr := httptest.NewRecorder()
-	a.Router.ServeHTTP(rr, req)
-
-	return rr
 }
 
 func checkResponseCode(t *testing.T, expected, actual int) {
