@@ -50,6 +50,7 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/user", a.getUserByEmail).Methods("POST")
 	a.Router.HandleFunc("/users", a.getAllUsers).Methods("GET")
 	a.Router.HandleFunc("/users/register", a.createUser).Methods("POST")
+	a.Router.HandleFunc("/users/login", a.loginUser).Methods("POST")
 
 	// subscription routes
 	a.Router.HandleFunc("/subscriptions", a.getAllSubs).Methods("GET")
@@ -58,6 +59,31 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.getSub).Methods("GET")
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.updateSub).Methods("PUT")
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.deleteSub).Methods("DELETE")
+}
+
+// Loging a user
+func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Payload Request")
+		return
+	}
+	defer r.Body.Close()
+
+	if statusCode, err := u.comparePasswords(a.DB); err != nil {
+		switch statusCode {
+		case 400:
+			respondWithError(w, http.StatusBadRequest, "No User exists for this email")
+			return
+		case 0:
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	// respond with token
+	respondWithJSON(w, http.StatusOK, u)
 }
 
 // GET all users

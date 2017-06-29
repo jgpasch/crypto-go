@@ -44,12 +44,6 @@ func TestCreateUser(t *testing.T) {
 	if m["email"] != "test@email.com" {
 		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
 	}
-	if m["password"] == nil {
-		t.Error("Expected the 'password' key of the response to have a value. Got nil")
-	}
-	if m["salt"] == nil {
-		t.Error("Expected the 'salt' key of the response to have a value. Got nil")
-	}
 }
 
 // Test get user by email
@@ -68,12 +62,6 @@ func TestGetUserByEmail(t *testing.T) {
 
 	if m["email"] != "test@email.com" {
 		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
-	}
-	if m["password"] != "mysecurepassword123" {
-		t.Errorf("Expected the 'password' key of the response to be set to 'mysecurepassword123'. Got '%v'", m["password"])
-	}
-	if m["salt"] != "randomsalt" {
-		t.Errorf("Expected the 'salt' key of the response to be set to 'randomsalt'. Got '%v'", m["salt"])
 	}
 }
 
@@ -153,9 +141,8 @@ func TestGetSub(t *testing.T) {
 func addUser() {
 	email := "test@email.com"
 	password := "mysecurepassword123"
-	salt := "randomsalt"
 
-	a.DB.Exec("INSERT INTO users(email, password, salt) VALUES($1, $2, $3)", email, password, salt)
+	a.DB.Exec("INSERT INTO users(email, password) VALUES($1, $2)", email, password)
 }
 
 func addProducts(count int) {
@@ -280,8 +267,7 @@ const userTableCreationQuery = `CREATE TABLE IF NOT EXISTS users
 (
 	id SERIAL PRIMARY KEY,
 	email TEXT NOT NULL,
-	password TEXT NOT NULL,
-	salt TEXT NOT NULL
+	password TEXT NOT NULL
 )`
 
 func ensureTableExists() {
