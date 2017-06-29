@@ -10,7 +10,7 @@ import (
 type user struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
-	Password string `json:"password"`
+	Password string `json:"password,omitempty"`
 }
 
 func (u *user) getUserByID(db *sql.DB) error {
@@ -18,8 +18,8 @@ func (u *user) getUserByID(db *sql.DB) error {
 }
 
 func (u *user) getUserByEmail(db *sql.DB) error {
-	return db.QueryRow("SELECT email, password FROM users WHERE email=$1",
-		u.Email).Scan(&u.Email, &u.Password)
+	return db.QueryRow("SELECT email FROM users WHERE email=$1",
+		u.Email).Scan(&u.Email)
 }
 
 func (u *user) createUser(db *sql.DB) error {
@@ -39,16 +39,17 @@ func (u *user) createUser(db *sql.DB) error {
 		"INSERT INTO users(email, password) VALUES($1, $2) RETURNING id, email",
 		u.Email, hash).Scan(&u.ID, &u.Email)
 
+	u.Password = ""
 	if err != nil {
 		return err
 	}
 
 	return nil
-	// and save the new user.
 }
 
 func (u *user) comparePasswords(db *sql.DB) (int, error) {
 	inputPassword := []byte(u.Password)
+	u.Password = ""
 	err := u.getUserByEmail(db)
 	if err != nil {
 		return 400, err
@@ -58,7 +59,7 @@ func (u *user) comparePasswords(db *sql.DB) (int, error) {
 }
 
 func getAllUsers(db *sql.DB) ([]user, error) {
-	rows, err := db.Query("SELECT id, email, password FROM users")
+	rows, err := db.Query("SELECT id, email FROM users")
 
 	if err != nil {
 		return nil, err
@@ -70,7 +71,7 @@ func getAllUsers(db *sql.DB) ([]user, error) {
 
 	for rows.Next() {
 		var u user
-		if err := rows.Scan(&u.ID, &u.Email, &u.Password); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
