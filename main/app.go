@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
+	"time"
 
 	"fmt"
 
@@ -12,6 +13,8 @@ import (
 	"net/http"
 
 	"encoding/json"
+
+	"github.com/dgrijalva/jwt-go"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -61,7 +64,21 @@ func (a *App) initializeRoutes() {
 	a.Router.HandleFunc("/subscriptions/{id:[0-9]+}", a.deleteSub).Methods("DELETE")
 }
 
-// Loging a user
+// Create a token for the user
+func createToken(username string) (string, error) {
+	expiration := time.Now().Add(time.Hour * 1).Unix()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"sub": username, "iat": expiration})
+
+	tokenString, err := token.SignedString([]byte("mysecret"))
+
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+// Loging a user in
 func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
 	var u user
 	decoder := json.NewDecoder(r.Body)
@@ -83,7 +100,18 @@ func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// respond with token
-	respondWithJSON(w, http.StatusOK, u)
+	tokenStr, err := createToken(u.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	payloadStr := `{"email":` + `"` + u.Email + `"` + `,"token":` + `"` + tokenStr + `"}`
+	payload := []byte(payloadStr)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(payload)
 }
 
 // GET all users
@@ -128,6 +156,8 @@ func (a *App) getUserByEmail(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	u.Password = ""
 
 	respondWithJSON(w, http.StatusOK, u)
 }

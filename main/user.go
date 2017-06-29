@@ -18,8 +18,8 @@ func (u *user) getUserByID(db *sql.DB) error {
 }
 
 func (u *user) getUserByEmail(db *sql.DB) error {
-	return db.QueryRow("SELECT email FROM users WHERE email=$1",
-		u.Email).Scan(&u.Email)
+	return db.QueryRow("SELECT email, password FROM users WHERE email=$1",
+		u.Email).Scan(&u.Email, &u.Password)
 }
 
 func (u *user) createUser(db *sql.DB) error {
