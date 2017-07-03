@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"fmt"
+
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -25,6 +27,10 @@ func createToken(username string) (string, error) {
 
 // Loging a user in
 func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "OPTIONS" {
+		fmt.Println("i'm here")
+		return
+	}
 	var u user
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&u); err != nil {

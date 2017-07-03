@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	_ "github.com/lib/pq"
@@ -36,7 +37,11 @@ func (a *App) Initialize(user, dbname string) {
 // Run runs the app
 func (a *App) Run(addr string) {
 	fmt.Printf("Server listening on port %s\n", strings.Trim(addr, ":"))
-	log.Fatal(http.ListenAndServe(addr, a.Router))
+
+	headersOk := handlers.AllowedHeaders([]string{"Content-Type"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	log.Fatal(http.ListenAndServe(addr, handlers.CORS(originsOk, headersOk)(a.Router)))
+
 }
 
 func (a *App) initializeRoutes() {
@@ -46,8 +51,8 @@ func (a *App) initializeRoutes() {
 	// user routes
 	a.Router.Handle("/user", commonHandlers.ThenFunc(a.getUserByEmail)).Methods("POST")
 	a.Router.Handle("/users", commonHandlers.ThenFunc(a.getAllUsers)).Methods("GET")
-	a.Router.Handle("/users/register", alice.New(loggingHandler).ThenFunc(a.createUser)).Methods("POST")
-	a.Router.Handle("/users/login", alice.New(loggingHandler).ThenFunc(a.loginUser)).Methods("POST")
+	a.Router.Handle("/auth/register", alice.New(loggingHandler).ThenFunc(a.createUser)).Methods("POST")
+	a.Router.Handle("/auth/login", alice.New(loggingHandler).ThenFunc(a.loginUser)).Methods("POST")
 
 	// subscription routes
 	a.Router.Handle("/subscriptions", commonHandlers.ThenFunc(a.getAllSubs)).Methods("GET")
