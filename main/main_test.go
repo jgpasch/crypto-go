@@ -31,9 +31,9 @@ func TestMain(m *testing.M) {
 func TestCreateUser(t *testing.T) {
 	clearTable("users")
 
-	payload := []byte(`{"email":"test@email.com","password":"mysecurepassword123"}`)
+	payload := []byte(`{"email":"test@email.com","password":"mysecurepassword123","number":"14802161540"}`)
 
-	req, _ := http.NewRequest("POST", "/users/register", bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(payload))
 	response := executeRequest(req)
 
 	checkResponseCode(t, http.StatusCreated, response.Code)
@@ -43,6 +43,9 @@ func TestCreateUser(t *testing.T) {
 
 	if m["email"] != "test@email.com" {
 		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
+	}
+	if m["number"] != "14802161540" {
+		t.Errorf("Expected the 'number' key of the response to be set to '14802161540'. Got '%v'", m["number"])
 	}
 }
 
@@ -141,8 +144,9 @@ func TestGetSub(t *testing.T) {
 func addUser() {
 	email := "test@email.com"
 	password := "mysecurepassword123"
+	number := "14802161540"
 
-	a.DB.Exec("INSERT INTO users(email, password) VALUES($1, $2)", email, password)
+	a.DB.Exec("INSERT INTO users(email, password, number) VALUES($1, $2, $3)", email, password, number)
 }
 
 func addProducts(count int) {
@@ -267,7 +271,9 @@ const userTableCreationQuery = `CREATE TABLE IF NOT EXISTS users
 (
 	id SERIAL PRIMARY KEY,
 	email TEXT NOT NULL,
-	password TEXT NOT NULL
+	password TEXT NOT NULL,
+	number TEXT NOT NULL,
+	request_id TEXT DEFAULT 0
 )`
 
 func ensureTableExists() {

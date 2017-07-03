@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"fmt"
-
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -27,10 +25,6 @@ func createToken(username string) (string, error) {
 
 // Loging a user in
 func (a *App) loginUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "OPTIONS" {
-		fmt.Println("i'm here")
-		return
-	}
 	var u user
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&u); err != nil {
@@ -76,6 +70,7 @@ func (a *App) getAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
+	// create user obj in postgres
 	var u user
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&u); err != nil {
@@ -89,7 +84,19 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, u)
+	// respond with token
+	tokenStr, err := createToken(u.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	payloadStr := `{"email":` + `"` + u.Email + `"` + `,"token":` + `"` + tokenStr + `"}`
+	payload := []byte(payloadStr)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(payload)
 }
 
 // GET user by email

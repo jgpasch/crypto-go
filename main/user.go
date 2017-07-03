@@ -8,9 +8,11 @@ import (
 )
 
 type user struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password,omitempty"`
+	ID        int    `json:"id"`
+	Email     string `json:"email"`
+	Password  string `json:"password,omitempty"`
+	Number    string `json:"number"`
+	RequestID string `json:"request_id,omitempty"`
 }
 
 func (u *user) getUserByID(db *sql.DB) error {
@@ -18,8 +20,8 @@ func (u *user) getUserByID(db *sql.DB) error {
 }
 
 func (u *user) getUserByEmail(db *sql.DB) error {
-	return db.QueryRow("SELECT email, password FROM users WHERE email=$1",
-		u.Email).Scan(&u.Email, &u.Password)
+	return db.QueryRow("SELECT email, password, number, request_id FROM users WHERE email=$1",
+		u.Email).Scan(&u.Email, &u.Password, &u.Number, &u.RequestID)
 }
 
 func (u *user) createUser(db *sql.DB) error {
@@ -36,8 +38,8 @@ func (u *user) createUser(db *sql.DB) error {
 	}
 
 	err = db.QueryRow(
-		"INSERT INTO users(email, password) VALUES($1, $2) RETURNING id, email",
-		u.Email, hash).Scan(&u.ID, &u.Email)
+		"INSERT INTO users(email, password, number) VALUES($1, $2, $3) RETURNING id, email, number",
+		u.Email, hash, u.Number).Scan(&u.ID, &u.Email, &u.Number)
 
 	u.Password = ""
 	if err != nil {
@@ -59,7 +61,7 @@ func (u *user) comparePasswords(db *sql.DB) (int, error) {
 }
 
 func getAllUsers(db *sql.DB) ([]user, error) {
-	rows, err := db.Query("SELECT id, email FROM users")
+	rows, err := db.Query("SELECT id, email, number FROM users")
 
 	if err != nil {
 		return nil, err
@@ -71,7 +73,7 @@ func getAllUsers(db *sql.DB) ([]user, error) {
 
 	for rows.Next() {
 		var u user
-		if err := rows.Scan(&u.ID, &u.Email); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Number); err != nil {
 			return nil, err
 		}
 		users = append(users, u)
