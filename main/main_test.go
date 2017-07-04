@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto-go/main"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +30,7 @@ func TestMain(m *testing.M) {
 func TestCreateUser(t *testing.T) {
 	clearTable("users")
 
-	payload := []byte(`{"email":"test@email.com","password":"mysecurepassword123","number":"14802161540"}`)
+	payload := []byte(`{"email":"test@email.com","password":"mysecurepassword123"}`)
 
 	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(payload))
 	response := executeRequest(req)
@@ -43,9 +42,6 @@ func TestCreateUser(t *testing.T) {
 
 	if m["email"] != "test@email.com" {
 		t.Errorf("Expected the 'email' key of the response to be set to 'test@email.com'. Got '%v'", m["email"])
-	}
-	if m["number"] != "14802161540" {
-		t.Errorf("Expected the 'number' key of the response to be set to '14802161540'. Got '%v'", m["number"])
 	}
 }
 
@@ -144,9 +140,8 @@ func TestGetSub(t *testing.T) {
 func addUser() {
 	email := "test@email.com"
 	password := "mysecurepassword123"
-	number := "14802161540"
 
-	a.DB.Exec("INSERT INTO users(email, password, number) VALUES($1, $2, $3)", email, password, number)
+	a.DB.Exec("INSERT INTO users(email, password) VALUES($1, $2)", email, password)
 }
 
 func addProducts(count int) {
@@ -204,7 +199,6 @@ func TestUpdateSub(t *testing.T) {
 	checkResponseCode(t, http.StatusOK, response.Code)
 
 	var m map[string]interface{}
-	fmt.Println(m)
 	json.Unmarshal(response.Body.Bytes(), &m)
 	if m["id"] != originalSub["id"] {
 		t.Errorf("Expected the id to remain the same (%v). Got %v", originalSub["id"], m["id"])
@@ -272,7 +266,7 @@ const userTableCreationQuery = `CREATE TABLE IF NOT EXISTS users
 	id SERIAL PRIMARY KEY,
 	email TEXT NOT NULL,
 	password TEXT NOT NULL,
-	number TEXT NOT NULL,
+	number TEXT DEFAULT 0,
 	request_id TEXT DEFAULT 0
 )`
 

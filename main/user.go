@@ -38,8 +38,8 @@ func (u *user) createUser(db *sql.DB) error {
 	}
 
 	err = db.QueryRow(
-		"INSERT INTO users(email, password, number) VALUES($1, $2, $3) RETURNING id, email, number",
-		u.Email, hash, u.Number).Scan(&u.ID, &u.Email, &u.Number)
+		"INSERT INTO users(email, password) VALUES($1, $2) RETURNING id, email",
+		u.Email, hash).Scan(&u.ID, &u.Email)
 
 	u.Password = ""
 	if err != nil {
