@@ -7,7 +7,12 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 )
+
+type contextKey int
+
+const emailCtxKey contextKey = 0
 
 // LoggingHandler function to log request info
 func loggingHandler(next http.Handler) http.Handler {
@@ -45,7 +50,8 @@ func validateToken(next http.Handler) http.Handler {
 			return
 		}
 
-		if _, ok := myToken.Claims.(jwt.MapClaims); ok && myToken.Valid {
+		if claims, ok := myToken.Claims.(jwt.MapClaims); ok && myToken.Valid {
+			context.Set(r, emailCtxKey, claims["sub"])
 			next.ServeHTTP(w, r)
 		} else {
 			fmt.Println(err)

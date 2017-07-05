@@ -6,6 +6,7 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 )
 
 // Create a token for the user
@@ -116,6 +117,56 @@ func (a *App) getUserByEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u.Password = ""
+
+	respondWithJSON(w, http.StatusOK, u)
+}
+
+func (a *App) updateUserNumber(w http.ResponseWriter, r *http.Request) {
+	userEmail := context.Get(r, emailCtxKey)
+	if userEmail == nil {
+		respondWithError(w, http.StatusInternalServerError, "Problem getting username from token")
+		return
+	}
+
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
+		return
+	}
+	defer r.Body.Close()
+
+	u.Email = userEmail.(string)
+
+	if err := u.updateUserNumber(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, u)
+}
+
+func (a *App) updateUserRequestID(w http.ResponseWriter, r *http.Request) {
+	userEmail := context.Get(r, emailCtxKey)
+	if userEmail == nil {
+		respondWithError(w, http.StatusInternalServerError, "Problem getting username from token")
+		return
+	}
+
+	var u user
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&u); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
+		return
+	}
+	defer r.Body.Close()
+
+	u.Email = userEmail.(string)
+
+	if err := u.updateUserRequestID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	respondWithJSON(w, http.StatusOK, u)
 }

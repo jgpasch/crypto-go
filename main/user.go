@@ -24,6 +24,18 @@ func (u *user) getUserByEmail(db *sql.DB) error {
 		u.Email).Scan(&u.Email, &u.Password, &u.Number, &u.RequestID)
 }
 
+func (u *user) updateUserNumber(db *sql.DB) error {
+	_, err := db.Exec("UPDATE users SET number=$1 WHERE email=$2", u.Number, u.Email)
+
+	return err
+}
+
+func (u *user) updateUserRequestID(db *sql.DB) error {
+	_, err := db.Exec("UPDATE users SET request_id=$1 WHERE email=$2", u.RequestID, u.Email)
+
+	return err
+}
+
 func (u *user) createUser(db *sql.DB) error {
 	// call get user by email to see if email already taken
 	err := u.getUserByEmail(db)
@@ -61,7 +73,7 @@ func (u *user) comparePasswords(db *sql.DB) (int, error) {
 }
 
 func getAllUsers(db *sql.DB) ([]user, error) {
-	rows, err := db.Query("SELECT id, email, number FROM users")
+	rows, err := db.Query("SELECT id, email, number, request_id FROM users")
 
 	if err != nil {
 		return nil, err
@@ -73,7 +85,7 @@ func getAllUsers(db *sql.DB) ([]user, error) {
 
 	for rows.Next() {
 		var u user
-		if err := rows.Scan(&u.ID, &u.Email, &u.Number); err != nil {
+		if err := rows.Scan(&u.ID, &u.Email, &u.Number, &u.RequestID); err != nil {
 			return nil, err
 		}
 		users = append(users, u)

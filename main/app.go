@@ -33,7 +33,10 @@ func (a *App) Initialize(user, dbname string) {
 	}
 
 	a.Router = mux.NewRouter()
-	a.TestInitializeRoutes()
+	a.initializeRoutes()
+
+	// Test Routes
+	// a.TestInitializeRoutes()
 }
 
 // Run runs the app
@@ -51,8 +54,10 @@ func (a *App) initializeRoutes() {
 	commonHandlers := alice.New(loggingHandler, validateToken)
 
 	// user routes
-	a.Router.Handle("/user", commonHandlers.ThenFunc(a.getUserByEmail)).Methods("POST")
+	a.Router.Handle("/users", commonHandlers.ThenFunc(a.getUserByEmail)).Methods("POST")
 	a.Router.Handle("/users", commonHandlers.ThenFunc(a.getAllUsers)).Methods("GET")
+	a.Router.Handle("/users", commonHandlers.ThenFunc(a.updateUserNumber)).Methods("PUT")
+	a.Router.Handle("/users/nexmo", commonHandlers.ThenFunc(a.updateUserRequestID)).Methods("PUT")
 
 	a.Router.Handle("/auth/register", alice.New(loggingHandler).ThenFunc(a.createUser)).Methods("POST")
 	a.Router.Handle("/auth/login", alice.New(loggingHandler).ThenFunc(a.loginUser)).Methods("POST")
@@ -72,8 +77,8 @@ func (a *App) TestInitializeRoutes() {
 	a.Router.HandleFunc("/user", a.getUserByEmail).Methods("POST")
 	a.Router.HandleFunc("/user", a.getAllUsers).Methods("POST")
 
-	a.Router.Handle("/auth/register", alice.New(loggingHandler).ThenFunc(a.createUser)).Methods("POST")
-	a.Router.Handle("/auth/login", alice.New(loggingHandler).ThenFunc(a.loginUser)).Methods("POST")
+	a.Router.HandleFunc("/auth/register", a.createUser).Methods("POST")
+	a.Router.HandleFunc("/auth/login", a.loginUser).Methods("POST")
 
 	// subscription routes
 	a.Router.HandleFunc("/subscriptions", a.getAllSubs).Methods("GET")
