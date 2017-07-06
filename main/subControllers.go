@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 )
 
@@ -19,6 +20,8 @@ func (a *App) getSub(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := sub{ID: id}
+	userEmail := context.Get(r, emailCtxKey)
+	s.Owner = userEmail.(string)
 	if err := s.getSub(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -38,6 +41,8 @@ func (a *App) getSubByToken(w http.ResponseWriter, r *http.Request) {
 	token := vars["token"]
 
 	s := sub{Token: token}
+	userEmail := context.Get(r, emailCtxKey)
+	s.Owner = userEmail.(string)
 	if err := s.getSubByToken(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
@@ -64,7 +69,10 @@ func (a *App) getAllSubs(w http.ResponseWriter, r *http.Request) {
 		start = 0
 	}
 
-	subs, err := getAllSubs(a.DB, start, count)
+	userEmail := context.Get(r, emailCtxKey)
+	owner := userEmail.(string)
+
+	subs, err := getAllSubs(a.DB, start, count, owner)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -80,6 +88,8 @@ func (a *App) createSub(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
 		return
 	}
+	userEmail := context.Get(r, emailCtxKey)
+	s.Owner = userEmail.(string)
 	defer r.Body.Close()
 
 	if err := s.createSub(a.DB); err != nil {

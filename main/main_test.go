@@ -258,6 +258,7 @@ const subscriptionTableCreationQuery = `CREATE TABLE IF NOT EXISTS subs
 	minval NUMERIC(10,2) NOT NULL DEFAULT 0,
 	maxval NUMERIC(10,2) NOT NULL DEFAULT 0,
 	minmaxchange NUMERIC(10,2) NOT NULL DEFAULT 0,
+	owner TEXT NOT NULL,
 	active BOOLEAN DEFAULT FALSE
 )`
 
