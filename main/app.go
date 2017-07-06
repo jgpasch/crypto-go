@@ -43,7 +43,7 @@ func (a *App) Initialize(user, dbname string) {
 func (a *App) Run(addr string) {
 	fmt.Printf("Server listening on port %s\n", strings.Trim(addr, ":"))
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins([]string{"*"})
 	log.Fatal(http.ListenAndServe(addr, handlers.CORS(originsOk, headersOk)(a.Router)))
 
