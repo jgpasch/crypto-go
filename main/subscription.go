@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"time"
 )
 
 type sub struct {
@@ -33,6 +35,24 @@ func (s *sub) updateSub(db *sql.DB) error {
 	return err
 }
 
+func (s *sub) toggleActive(db *sql.DB) error {
+	var temp sub
+	temp.Owner = s.Owner
+	temp.ID = s.ID
+	err := temp.getSub(db)
+	if err != nil {
+		return err
+	}
+	newActive := !temp.Active
+
+	_, err2 :=
+		db.Exec("UPDATE subs SET active=$1 WHERE id=$2 AND owner=$3",
+			newActive, s.ID, s.Owner)
+	s.Active = newActive
+
+	return err2
+}
+
 func (s *sub) deleteSub(db *sql.DB) error {
 	_, err :=
 		db.Exec("DELETE FROM subs WHERE id=$1", s.ID)
@@ -52,7 +72,28 @@ func (s *sub) createSub(db *sql.DB) error {
 	return nil
 }
 
-func getAllSubs(db *sql.DB, start, count int, owner string) ([]sub, error) {
+func getAllSubs(db *sql.DB) ([]sub, error) {
+	rows, err := db.Query("SELECT id, active FROM subs")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	subs := []sub{}
+
+	for rows.Next() {
+		var s sub
+		if err := rows.Scan(&s.ID, &s.Active); err != nil {
+			return nil, err
+		}
+		subs = append(subs, s)
+	}
+
+	return subs, nil
+}
+
+func getAllSubsByOwner(db *sql.DB, start, count int, owner string) ([]sub, error) {
 	rows, err := db.Query(
 		"SELECT id, token, percent, minval, maxval, minmaxchange, owner, active FROM subs WHERE owner=$1 LIMIT $2 OFFSET $3", owner, count, start)
 	if err != nil {
@@ -72,4 +113,22 @@ func getAllSubs(db *sql.DB, start, count int, owner string) ([]sub, error) {
 	}
 
 	return subs, nil
+}
+
+func (s *sub) doEvery() {
+
+	// add this watch to the map
+	ticker := time.NewTicker(time.Second)
+	myMap[s.ID] = watcher{WatchEvent: ticker}
+
+	go func() {
+		for t := range myMap[s.ID].WatchEvent.C {
+			fmt.Println("Tick at: ", t, " --  ", s.ID)
+		}
+	}()
+}
+
+func (s *sub) stopWatch() {
+	myMap[s.ID].WatchEvent.Stop()
+	delete(myMap, s.ID)
 }

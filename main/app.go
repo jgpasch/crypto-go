@@ -69,6 +69,7 @@ func (a *App) initializeRoutes() {
 	a.Router.Handle("/subscriptions/{token:[a-zA-Z]+}", commonHandlers.ThenFunc(a.getSubByToken)).Methods("GET")
 	a.Router.Handle("/subscriptions/{id:[0-9]+}", commonHandlers.ThenFunc(a.getSub)).Methods("GET")
 	a.Router.Handle("/subscriptions/{id:[0-9]+}", commonHandlers.ThenFunc(a.updateSub)).Methods("PUT")
+	a.Router.Handle("/subscriptions/toggle/{id:[0-9]+}", commonHandlers.ThenFunc(a.toggleActive)).Methods("GET")
 	a.Router.Handle("/subscriptions/{id:[0-9]+}", commonHandlers.ThenFunc(a.deleteSub)).Methods("DELETE")
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -72,7 +73,7 @@ func (a *App) getAllSubs(w http.ResponseWriter, r *http.Request) {
 	userEmail := context.Get(r, emailCtxKey)
 	owner := userEmail.(string)
 
-	subs, err := getAllSubs(a.DB, start, count, owner)
+	subs, err := getAllSubsByOwner(a.DB, start, count, owner)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -123,6 +124,33 @@ func (a *App) updateSub(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, s)
+}
+
+func (a *App) toggleActive(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
+		return
+	}
+
+	var s sub
+	s.ID = id
+	userEmail := context.Get(r, emailCtxKey)
+	s.Owner = userEmail.(string)
+
+	if err := s.toggleActive(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if s.Active {
+		time.AfterFunc(1*time.Second, s.doEvery)
+	} else {
+		s.stopWatch()
+	}
+
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{"result": "success", "active": s.Active})
 }
 
 func (a *App) deleteSub(w http.ResponseWriter, r *http.Request) {

@@ -12,6 +12,8 @@ func main() {
 
 	setupNexmo(&a)
 
+	a.startWatchEvents()
+
 	file, _ := os.Open("config.json")
 	decoder := json.NewDecoder(file)
 	var config map[string]interface{}
