@@ -13,7 +13,7 @@ Steps to run:
 ## 5. ensure that a db by that name exists.
 
 ## 6. enter the psql command line and create the subscription table
-    ```CREATE TABLE IF NOT EXISTS subs
+    CREATE TABLE IF NOT EXISTS subs
     (
       id SERIAL PRIMARY KEY,
       token VARCHAR(30) NOT NULL,
@@ -23,17 +23,17 @@ Steps to run:
       minmaxchange NUMERIC(10,2) NOT NULL DEFAULT 0,
       owner TEXT NOT NULL,
       active BOOLEAN DEFAULT FALSE
-    )```
+    )
 
 ## 7. ensure the user table exists
-    ```CREATE TABLE IF NOT EXISTS users
+    CREATE TABLE IF NOT EXISTS users
     (
       id SERIAL PRIMARY KEY,
       email TEXT NOT NULL,
       password TEXT NOT NULL,
       number TEXT DEFAULT 0,
       request_id TEXT DEFAULT 0
-    )```
+    )
 
 ## 8. Change nexmo details to use your own account.
     1. Create a file in the folder *main* called config.json
