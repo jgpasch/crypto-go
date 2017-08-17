@@ -59,6 +59,7 @@ func (a *App) initializeRoutes() {
 	a.Router.Handle("/users", commonHandlers.ThenFunc(a.getAllUsers)).Methods("GET")
 	a.Router.Handle("/users", commonHandlers.ThenFunc(a.updateUserNumber)).Methods("PUT")
 	a.Router.Handle("/users/nexmo", commonHandlers.ThenFunc(a.updateUserRequestID)).Methods("PUT")
+	a.Router.Handle("/users/verify/{code:[0-9]+}", commonHandlers.ThenFunc(a.submitCode)).Methods("GET")
 
 	a.Router.Handle("/auth/register", alice.New(loggingHandler).ThenFunc(a.createUser)).Methods("POST")
 	a.Router.Handle("/auth/login", alice.New(loggingHandler).ThenFunc(a.loginUser)).Methods("POST")

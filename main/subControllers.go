@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// *****
 // Gets a single subscription
 func (a *App) getSub(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -36,6 +37,7 @@ func (a *App) getSub(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, s)
 }
 
+// *****
 // GET sub by token
 func (a *App) getSubByToken(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -57,6 +59,7 @@ func (a *App) getSubByToken(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, s)
 }
 
+// *****
 // GET all subscriptions
 func (a *App) getAllSubs(w http.ResponseWriter, r *http.Request) {
 	count, _ := strconv.Atoi(r.FormValue("count"))
@@ -82,6 +85,8 @@ func (a *App) getAllSubs(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, subs)
 }
 
+// *****
+// *****
 func (a *App) createSub(w http.ResponseWriter, r *http.Request) {
 	var s sub
 	decoder := json.NewDecoder(r.Body)
@@ -101,6 +106,8 @@ func (a *App) createSub(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, s)
 }
 
+// *****
+// *****
 func (a *App) updateSub(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -126,6 +133,8 @@ func (a *App) updateSub(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, s)
 }
 
+// *****
+// *****
 func (a *App) toggleActive(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -153,6 +162,8 @@ func (a *App) toggleActive(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{"result": "success", "active": s.Active})
 }
 
+// *****
+// *****
 func (a *App) deleteSub(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])

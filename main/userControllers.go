@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
+	"github.com/gorilla/mux"
 )
 
 // Create a token for the user
@@ -78,12 +81,50 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Invalid Request Payload")
 		return
 	}
+
+	if u.Number == "" || len(u.Number) < 10 {
+		respondWithError(w, http.StatusBadRequest, "Please enter a valid phone number")
+		return
+	}
+
 	defer r.Body.Close()
 
+	u.Number = "1" + u.Number
 	if err := u.createUser(a.DB); err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	// try to send nexmo verifcation, if not fail for now
+	// body := map[string]string{"api_key": "8711bd32", "api_secret": "5ddcbb3b27977312", "number": u.Number, "brand": "NexmoVerifyTest"}
+	// jsonBody, _ := json.Marshal(body)
+
+	// res, err := http.Post("https://api.nexmo.com/verify/json", "application/json", bytes.NewBuffer(jsonBody))
+	// if err != nil {
+	// 	respondWithError(w, http.StatusInternalServerError, "issue with nexmo, please try again")
+	// 	return
+	// }
+	// defer res.Body.Close()
+
+	// m := make(map[string]interface{})
+	// if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+	// 	respondWithError(w, http.StatusInternalServerError, "error parsing")
+	// 	return
+	// }
+
+	// id, ok := m["request_id"].(string)
+	// if !ok {
+	// 	respondWithError(w, http.StatusInternalServerError, "error parsing")
+	// 	return
+	// }
+
+	// u.RequestID = id
+	// if err := u.updateUserRequestID(a.DB); err != nil {
+	// 	respondWithError(w, http.StatusInternalServerError, "issue saving request ID")
+	// 	return
+	// }
+	fmt.Println("would be sending the verification code now and saving request id")
+	fmt.Println(u.Number)
 
 	// respond with token
 	tokenStr, err := createToken(u.Email)
@@ -98,6 +139,52 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	w.Write(payload)
+}
+
+// --------------------
+// end of createUser
+// --------------------
+
+// submit request ID to complete verification process
+func (a *App) submitCode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code := vars["code"]
+
+	userEmail := context.Get(r, emailCtxKey)
+	if userEmail == nil {
+		respondWithError(w, http.StatusInternalServerError, "problem getting user email from token")
+		return
+	}
+
+	var u user
+	u.Email = userEmail.(string)
+	if err := u.getUserByEmail(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error getting user by email")
+		return
+	}
+
+	body := map[string]string{"api_key": "8711bd32", "api_secret": "5ddcbb3b27977312", "request_id": u.RequestID, "code": code}
+	jsonBody, _ := json.Marshal(body)
+	res, err := http.Post("https://api.nexmo.com/verify/check/json", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "error sending verification code to nexmo")
+		return
+	}
+	// sendMessage(a.nexmoClient, u.Number, "It works!")
+
+	m := make(map[string]interface{})
+	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error parsing")
+		return
+	}
+
+	if m["status"] == "0" {
+		sendMessage(a.nexmoClient, u.Number, "You have been verified!")
+		respondWithJSON(w, http.StatusOK, m)
+	} else {
+		respondWithError(w, http.StatusBadRequest, m["error_text"].(string))
+	}
+
 }
 
 // GET user by email
