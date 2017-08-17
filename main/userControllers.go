@@ -96,35 +96,35 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// try to send nexmo verifcation, if not fail for now
-	// body := map[string]string{"api_key": "8711bd32", "api_secret": "5ddcbb3b27977312", "number": u.Number, "brand": "NexmoVerifyTest"}
-	// jsonBody, _ := json.Marshal(body)
+	body := map[string]string{"api_key": "8711bd32", "api_secret": "5ddcbb3b27977312", "number": u.Number, "brand": "NexmoVerifyTest"}
+	jsonBody, _ := json.Marshal(body)
 
-	// res, err := http.Post("https://api.nexmo.com/verify/json", "application/json", bytes.NewBuffer(jsonBody))
-	// if err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, "issue with nexmo, please try again")
-	// 	return
-	// }
-	// defer res.Body.Close()
+	res, err := http.Post("https://api.nexmo.com/verify/json", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "issue with nexmo, please try again")
+		return
+	}
+	defer res.Body.Close()
 
-	// m := make(map[string]interface{})
-	// if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, "error parsing")
-	// 	return
-	// }
+	m := make(map[string]interface{})
+	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "error parsing")
+		return
+	}
 
-	// id, ok := m["request_id"].(string)
-	// if !ok {
-	// 	respondWithError(w, http.StatusInternalServerError, "error parsing")
-	// 	return
-	// }
+	id, ok := m["request_id"].(string)
+	if !ok {
+		respondWithError(w, http.StatusInternalServerError, "error parsing")
+		return
+	}
 
-	// u.RequestID = id
-	// if err := u.updateUserRequestID(a.DB); err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, "issue saving request ID")
-	// 	return
-	// }
-	fmt.Println("would be sending the verification code now and saving request id")
-	fmt.Println(u.Number)
+	u.RequestID = id
+	if err := u.updateUserRequestID(a.DB); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "issue saving request ID")
+		return
+	}
+	// fmt.Println("would be sending the verification code now and saving request id")
+	// fmt.Println(u.Number)
 
 	// respond with token
 	tokenStr, err := createToken(u.Email)
@@ -149,6 +149,7 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) {
 func (a *App) submitCode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	code := vars["code"]
+	fmt.Println(code)
 
 	userEmail := context.Get(r, emailCtxKey)
 	if userEmail == nil {
@@ -170,7 +171,6 @@ func (a *App) submitCode(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "error sending verification code to nexmo")
 		return
 	}
-	// sendMessage(a.nexmoClient, u.Number, "It works!")
 
 	m := make(map[string]interface{})
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
@@ -184,6 +184,15 @@ func (a *App) submitCode(w http.ResponseWriter, r *http.Request) {
 	} else {
 		respondWithError(w, http.StatusBadRequest, m["error_text"].(string))
 	}
+	// if code == "1234" {
+	// 	body := `{"data": "you did it!"}`
+	// 	payload := []byte(body)
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusCreated)
+	// 	w.Write(payload)
+	// } else {
+	// 	respondWithError(w, http.StatusBadRequest, "Wrong code!")
+	// }
 
 }
 
