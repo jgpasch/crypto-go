@@ -93,9 +93,9 @@ func getAllSubs(db *sql.DB) ([]sub, error) {
 	return subs, nil
 }
 
-func getAllSubsByOwner(db *sql.DB, start, count int, owner string) ([]sub, error) {
+func getAllSubsByOwner(db *sql.DB, owner string) ([]sub, error) {
 	rows, err := db.Query(
-		"SELECT id, token, percent, minval, maxval, minmaxchange, owner, active FROM subs WHERE owner=$1 LIMIT $2 OFFSET $3", owner, count, start)
+		"SELECT id, token, percent, minval, maxval, minmaxchange, owner, active FROM subs WHERE owner=$1", owner)
 	if err != nil {
 		return nil, err
 	}

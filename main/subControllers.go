@@ -62,21 +62,10 @@ func (a *App) getSubByToken(w http.ResponseWriter, r *http.Request) {
 // *****
 // GET all subscriptions
 func (a *App) getAllSubs(w http.ResponseWriter, r *http.Request) {
-	count, _ := strconv.Atoi(r.FormValue("count"))
-	start, _ := strconv.Atoi(r.FormValue("start"))
-
-	if count > 10 || count < 1 {
-		count = 10
-	}
-
-	if start < 0 {
-		start = 0
-	}
-
 	userEmail := context.Get(r, emailCtxKey)
 	owner := userEmail.(string)
 
-	subs, err := getAllSubsByOwner(a.DB, start, count, owner)
+	subs, err := getAllSubsByOwner(a.DB, owner)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
