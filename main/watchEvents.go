@@ -19,7 +19,7 @@ func (a *App) startWatchEvents() {
 	}
 	for i := range subs {
 		if subs[i].Active {
-			subs[i].doEvery()
+			subs[i].doEvery(a)
 		}
 	}
 }

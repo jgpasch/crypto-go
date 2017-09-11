@@ -2,13 +2,18 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"math"
+	"net/http"
+	"strconv"
 	"time"
 )
 
 type sub struct {
-	ID           int     `json:"id"`
-	Token        string  `json:"token"`
+	ID           int    `json:"id"`
+	Token        string `json:"token"`
+	FullName     string
 	Percent      float64 `json:"percent"`
 	MinVal       float64 `json:"minVal"`
 	MaxVal       float64 `json:"maxVal"`
@@ -115,15 +120,63 @@ func getAllSubsByOwner(db *sql.DB, owner string) ([]sub, error) {
 	return subs, nil
 }
 
-func (s *sub) doEvery() {
+func (s *sub) doEvery(a *App) {
 
 	// add this watch to the map
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(4 * time.Second)
 	myMap[s.ID] = watcher{WatchEvent: ticker}
 
+	fmt.Println(s.ID)
+	err := a.DB.QueryRow("SELECT token, owner FROM subs where id=$1", s.ID).Scan(&s.Token, &s.Owner)
+	switch {
+	case err == sql.ErrNoRows:
+		fmt.Println("no rows")
+	case err != nil:
+		fmt.Println(err)
+	default:
+	}
+
+	var number string
+	err2 := a.DB.QueryRow("SELECT number FROM users where email=$1", s.Owner).Scan(&number)
+	switch {
+	case err2 == sql.ErrNoRows:
+		fmt.Println("no user with that email")
+	case err2 != nil:
+		fmt.Println(err)
+	default:
+	}
+
 	go func() {
+		var lastPrice float64
 		for t := range myMap[s.ID].WatchEvent.C {
 			fmt.Println("Tick at: ", t, " --  ", s.ID)
+			// reach out to coin market cap api
+			var m = make([]map[string]interface{}, 0)
+			getJSON("https://api.coinmarketcap.com/v1/ticker/"+symbols[s.Token]+"/", &m)
+			// fmt.Println(m[0])
+			tmp, _ := strconv.ParseFloat(m[0]["price_usd"].(string), 64)
+			fmt.Println(lastPrice / tmp)
+
+			if lastPrice == 0.0 {
+				// first time starting watch, set init price
+
+				fmt.Println("setting price for first time:" + m[0]["price_usd"].(string))
+				lastPrice = tmp
+			} else if math.Abs(lastPrice/tmp) > (1 + .1) {
+				fmt.Println("top floor hit, new price': " + m[0]["price_usd"].(string))
+				lastPrice = tmp
+			} else if math.Abs(lastPrice/tmp) < (1 - .1) {
+				fmt.Println("bottom floor hit")
+				lastPrice = tmp
+			} else {
+				fmt.Println("difference not enough, move on")
+			}
+
+			// lastPrice, _ = strconv.ParseFloat(m[0]["price_usd"].(string), 64)
+
+			// fmt.Println(s.Token + ":  " + m[0]["price_usd"].(string))
+			// sendMessage(a.nexmoClient, number, s.Token+":  "+strconv.FormatFloat(lastPrice, 'f', -1, 64))
+
 		}
 	}()
 }
@@ -131,4 +184,17 @@ func (s *sub) doEvery() {
 func (s *sub) stopWatch() {
 	myMap[s.ID].WatchEvent.Stop()
 	delete(myMap, s.ID)
+}
+
+var myClient = &http.Client{Timeout: 10 * time.Second}
+
+func getJSON(url string, target interface{}) error {
+	res, err := myClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	b := json.NewDecoder(res.Body).Decode(target)
+	return b
 }

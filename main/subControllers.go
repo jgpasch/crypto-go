@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -143,7 +142,7 @@ func (a *App) toggleActive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.Active {
-		time.AfterFunc(1*time.Second, s.doEvery)
+		s.doEvery(a)
 	} else {
 		s.stopWatch()
 	}
